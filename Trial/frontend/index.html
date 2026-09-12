@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>trialx | Logistics Intelligence Hub</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Mapping -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+    <div id="app">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-satellite-dish"></i></div>
+                <div class="logo-text">DRISH<span>X</span></div>
+            </div>
+            <nav>
+                <button class="nav-item" data-view="dashboard">
+                    <i class="fas fa-satellite"></i> Operations
+                </button>
+                <button class="nav-item" data-view="trends">
+                    <i class="fas fa-chart-line"></i> Tactical Trends
+                </button>
+                <button class="nav-item" data-view="docs">
+                    <i class="fas fa-book"></i> Docs
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <!-- Copernicus link status card — populated by app.js from /api/auth/status -->
+                <div id="copernicus-card" class="copernicus-card"></div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 id="view-title">Operations</h1>
+                    <p id="view-subtitle" class="text-muted">Orbital Logistics Monitoring Terminal</p>
+                </div>
+                <div class="header-right">
+                    <div id="gti-display" class="threat-index">
+                        <span class="label">Spectral Integrity</span>
+                        <span class="value">Active</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- View Sections -->
+            <section id="dashboard-view" class="view">
+                <div class="map-viewport">
+                    <div id="main-map"></div>
+                    
+                    <!-- Tactical HUD Overlays -->
+                    <div class="hud-overlay-top">
+                        <div class="search-box glass-panel">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="map-search-input" placeholder="Coordinate Search (e.g. Frankfurt)...">
+                            <button id="execute-search" class="btn btn-search">Identify</button>
+                            <div id="search-results-dropdown" class="search-dropdown hidden"></div>
+                        </div>
+                    </div>
+
+                    <div class="hud-overlay-left">
+                        <div class="card glass-panel missions-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-crosshairs text-primary"></i> Mission Parameters</h3>
+                            </div>
+                            <div class="mission-presets">
+                                <div class="control-group mb-2">
+                                    <label class="hud-label">Temporal Depth</label>
+                                    <select id="mission-months" class="hud-select">
+                                        <option value="1">1 Month</option>
+                                        <option value="3">3 Months</option>
+                                        <option value="4" selected>4 Months (Default)</option>
+                                        <option value="6">6 Months</option>
+                                        <option value="12">1 Year</option>
+                                        <option value="24">2 Years</option>
+                                        <option value="36">3 Years</option>
+                                        <option value="48">4 Years</option>
+                                    </select>
+                                </div>
+                                <div class="control-group mb-2">
+                                    <label class="hud-label">Observation Depth</label>
+                                    <select id="mission-frames" class="hud-select">
+                                        <option value="5">Fast Scan</option>
+                                        <option value="10" selected>Balanced</option>
+                                        <option value="25">Deep Scan</option>
+                                        <option value="50">Strategic Audit</option>
+                                        <option value="1000">MAX Density</option>
+                                    </select>
+                                </div>
+                                <div class="hud-buttons">
+                                    <button id="draw-aoi" class="btn btn-hud-primary">
+                                        <i class="fas fa-vector-square"></i> Draw AOI
+                                    </button>
+                                    <button id="toggle-satellite" class="btn btn-hud-secondary">
+                                        <i class="fas fa-layer-group"></i> Layer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hud-overlay-right">
+                        <div class="card glass-panel feed-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-bell text-alert"></i> Signal Feed</h3>
+                                <button id="refresh-feed" class="btn-icon"><i class="fas fa-sync"></i></button>
+                            </div>
+                            <div id="alert-feed-compact" class="feed-container scrollable">
+                                <div class="loading-state">Syncing spectral link...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- New Tactical Intel Drawer -->
+                    <div id="intel-drawer" class="hud-overlay-right hidden">
+                        <div class="card glass-panel intel-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-microscope text-accent"></i> Target Intel Profile</h3>
+                                <button id="close-intel" class="btn-icon"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div id="intel-content" class="intel-body scrollable">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="trends-view" class="view hidden">
+                <div class="strategic-dashboard">
+                    <div class="analytics-top-bar glass-panel">
+                        <div class="selector-group">
+                            <label class="hud-label">Comparative Correlation</label>
+                            <div id="mission-comparison-selector" class="mission-checklist-hud">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                        <div class="date-filter-group">
+                            <div class="input-block">
+                                <label class="hud-label">Window Start</label>
+                                <input type="date" id="trend-from" class="hud-input">
+                            </div>
+                            <div class="input-block">
+                                <label class="hud-label">Window End</label>
+                                <input type="date" id="trend-to" class="hud-input">
+                            </div>
+                            <button id="refresh-trends" class="btn btn-hud-primary">Update Intelligence</button>
+                        </div>
+                    </div>
+                    
+                    <div class="strategic-grid">
+                        <div class="card glass-panel chart-card full-span">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-area text-accent"></i> Temporal Logistics Signature</h3>
+                            </div>
+                            <div class="chart-viewport">
+                                <canvas id="trend-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="stat-row">
+                            <div class="card glass-panel mini-stat">
+                                <span class="stat-label">Total Volume</span>
+                                <span id="stat-total" class="stat-value">0</span>
+                                <span class="stat-unit">S2 Detections</span>
+                            </div>
+                            <div class="card glass-panel mini-stat accent-blue">
+                                <span class="stat-label">Active Profiles</span>
+                                <span id="stat-avg" class="stat-value">0</span>
+                                <span class="stat-unit">Correlated</span>
+                            </div>
+                            <div class="card glass-panel mini-stat">
+                                <span class="stat-label">Operational Coverage</span>
+                                <span id="stat-peak" class="stat-value">--</span>
+                                <span class="stat-unit">Territory</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detailed Site View (Modal/Overlay) -->
+            <div id="site-overlay" class="overlay hidden">
+                <div class="overlay-content">
+                    <button class="close-overlay"><i class="fas fa-times"></i></button>
+                    <div id="site-detail-container"></div>
+                </div>
+            </div>
+
+            <!-- Progress HUD (Mission Intelligence Progress) -->
+            <div id="progress-hud" class="overlay hidden">
+                <div class="hud-center-content">
+                    <div class="hud-header">
+                        <i class="fas fa-satellite-dish pulse-bright"></i>
+                        <span>ACTIVE MISSION TELEMETRY</span>
+                    </div>
+                    <div class="hud-main">
+                        <div class="progress-bar-container">
+                            <div id="hud-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-stats">
+                            <span id="hud-step-text">Initializing satellite downlink...</span>
+                            <span id="hud-percent-text">0%</span>
+                        </div>
+                        <div id="hud-log" class="hud-log-console">
+                            <!-- Streamed logs appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Copernicus Connect Modal -->
+            <div id="connect-modal" class="overlay connect-overlay hidden">
+                <div class="connect-card">
+                    <button class="connect-close" data-close-connect aria-label="Close"><i class="fas fa-times"></i></button>
+                    <div class="connect-brand">
+                        <i class="fas fa-satellite-dish portal-icon"></i>
+                        <h2>Copernicus Orbital Access</h2>
+                    </div>
+
+                    <!-- STATE A: Connect (has credentials) -->
+                    <div id="connect-state-a" class="connect-state">
+                        <p class="connect-subtitle">Free ESA satellite data powers every analysis</p>
+
+                        <div class="input-group-cyber">
+                            <label>COPERNICUS CLIENT ID</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user-shield"></i>
+                                <input type="text" id="connect-id" placeholder="sh-00000000-0000-0000-0000-000000000000" autocomplete="off" spellcheck="false">
+                            </div>
+                        </div>
+
+                        <div class="input-group-cyber">
+                            <label>COPERNICUS CLIENT SECRET</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-key"></i>
+                                <input type="password" id="connect-secret" placeholder="••••••••••••••••••••••••••••" autocomplete="off" spellcheck="false">
+                                <button type="button" class="reveal-toggle" data-reveal="connect-secret" aria-label="Show secret"><i class="fas fa-eye"></i></button>
+                            </div>
+                        </div>
+
+                        <div id="connect-status" class="connect-banner hidden"></div>
+
+                        <button id="connect-submit" class="btn-orbital-connect">CONNECT</button>
+                        <button class="btn-ghost" data-goto-state="b">DON'T HAVE CREDENTIALS?</button>
+
+                        <p class="connect-note">Keys are stored in this browser only and sent nowhere except Copernicus</p>
+                    </div>
+
+                    <!-- STATE B: Get credentials (Journey B) -->
+                    <div id="connect-state-b" class="connect-state hidden">
+                        <p class="connect-subtitle">One-time setup on the Copernicus Data Space</p>
+
+                        <ol class="connect-steps">
+                            <li>
+                                <span class="step-badge">1</span>
+                                <div class="step-body">Sign in to Copernicus, or create a free account
+                                    <a href="https://identity.dataspace.copernicus.eu/auth/realms/CDSE/account/#/personal-info" target="_blank" rel="noopener" class="step-link">identity.dataspace.copernicus.eu <i class="fas fa-arrow-up-right-from-square"></i></a>
+                                </div>
+                            </li>
+                            <li><span class="step-badge">2</span><div class="step-body">Open User Settings → OAuth clients</div></li>
+                            <li><span class="step-badge">3</span><div class="step-body">Create a new OAuth client (any name works)</div></li>
+                            <li><span class="step-badge">4</span><div class="step-body">Copy the Client ID and Secret it shows you</div></li>
+                        </ol>
+
+                        <div class="connect-callout">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            <span>The Client Secret is shown only once — copy it before you leave.</span>
+                        </div>
+
+                        <a href="https://shapps.dataspace.copernicus.eu/dashboard/#/account/settings" target="_blank" rel="noopener" class="btn-orbital-connect btn-link">OPEN COPERNICUS DASHBOARD <i class="fas fa-arrow-up-right-from-square"></i></a>
+                        <button class="btn-ghost" data-goto-state="a">ENTER MY KEYS</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Docs View -->
+            <section id="docs-view" class="view hidden">
+                <div class="docs-layout">
+                    <!-- Left section nav (populated by app.js) -->
+                    <nav class="docs-subnav" id="docs-subnav"></nav>
+
+                    <!-- Center content -->
+                    <div class="docs-content" id="docs-content">
+
+                        <section class="docs-section" id="doc-introduction">
+                            <span class="docs-eyebrow">Getting Started</span>
+                            <h1 class="docs-h1">Introduction</h1>
+                            <p class="docs-lead">trialx — see what's moving, anywhere, for free.</p>
+                            <p>trialx answers one question for any road on Earth: <strong>how much traffic is on it, and how has that changed over time?</strong></p>
+                            <p>It exploits a quirk in how the Sentinel-2 satellite captures imagery. The sensor records red, green, and blue light about 1.01 seconds apart. Anything stationary looks normal — but a vehicle moving at highway speed shifts position between those captures, leaving a distinctive blue→green→red spectral smear across a few pixels. trialx finds those smears, counts them, estimates speed and heading, and tracks how volume changes across weeks and months.</p>
+                            <p>The output is a traffic-activity time-series for any major corridor on the planet — built entirely on free Copernicus data, running locally in your browser, with zero ground infrastructure.</p>
+                            <div class="docs-callout">
+                                <i class="fas fa-circle-info"></i>
+                                <div><strong>Why it matters</strong> — Road traffic is one of the most reliable observable indicators of what's actually happening in a place: more useful than official statements, harder to fake than statistics. trialx lets you point at any road, anywhere, and get months of trend data in minutes.</div>
+                            </div>
+                            <div class="docs-cards">
+                                <a class="docs-card" href="#doc-quickstart">
+                                    <i class="fas fa-rocket"></i>
+                                    <span class="docs-card-title">Get running</span>
+                                    <span class="docs-card-desc">Install and launch trialx in about two minutes.</span>
+                                </a>
+                                <a class="docs-card" href="#doc-connect">
+                                    <i class="fas fa-link"></i>
+                                    <span class="docs-card-title">Connect Copernicus</span>
+                                    <span class="docs-card-desc">Generate free credentials and link the satellite API.</span>
+                                </a>
+                                <a class="docs-card" href="#doc-howitworks">
+                                    <i class="fas fa-gauge-high"></i>
+                                    <span class="docs-card-title">How it works</span>
+                                    <span class="docs-card-desc">The spectral method behind every detection.</span>
+                                </a>
+                            </div>
+                        </section>
+
+                        <section class="docs-section" id="doc-quickstart">
+                            <h2 class="docs-h2">Quick Start</h2>
+                            <h3 class="docs-h3">Prerequisites</h3>
+                            <ul class="docs-list">
+                                <li>Python 3.11 (other versions may not work)</li>
+                                <li>A free <a class="docs-link" href="https://dataspace.copernicus.eu/" target="_blank" rel="noopener">Copernicus Data Space</a> account (~2 minutes)</li>
+                                <li>The trained RF model file (in the <code>trialx/</code> subdirectory)</li>
+                            </ul>
+                            <div class="docs-callout">
+                                <i class="fas fa-circle-info"></i>
+                                <div><strong>Heads up:</strong> first runs can be slow while trialx pings Overpass mirrors for road data. Be patient.</div>
+                            </div>
+                            <h3 class="docs-h3">Install and run</h3>
+                            <pre class="docs-code"><code># Clone the repository
+git clone https://github.com/sparkyniner/DRISH-X-Satellite-powered-freight-intelligence-.git
+cd DRISH-X-Satellite-powered-freight-intelligence-
+
+# Create and activate a virtual environment
+python3.11 -m venv venv
+source venv/bin/activate        # macOS / Linux
+venv\Scripts\activate           # Windows
+
+cd trialx
+pip install -r requirements.txt
+python trialx.py</code></pre>
+                            <p>The server starts on port 8000 — open <a class="docs-link" href="http://localhost:8000">http://localhost:8000</a>.</p>
+                            <a class="docs-cta" href="#doc-connect">
+                                <i class="fas fa-rocket"></i>
+                                <div class="docs-cta-body">
+                                    <span class="docs-cta-title">Next: connect Copernicus</span>
+                                    <span class="docs-cta-desc">Link your free satellite credentials to go live.</span>
+                                </div>
+                                <i class="fas fa-arrow-right docs-cta-arrow"></i>
+                            </a>
+                        </section>
+
+                        <section class="docs-section" id="doc-connect">
+                            <h2 class="docs-h2">Connecting Copernicus</h2>
+                            <p>trialx runs on free Copernicus (Sentinel-2) satellite imagery. To pull it, you'll generate an OAuth <strong>Client ID</strong> and <strong>Client Secret</strong> once, then paste them into the app. The whole thing takes about two minutes.</p>
+                            <div class="docs-steps">
+                                <div class="docs-step">
+                                    <div class="docs-step-num">1</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Sign in to Copernicus Data Space</h4>
+                                        <p>Create an account (or log in) at the Copernicus Data Space Ecosystem. It's completely free.</p>
+                                        <a class="docs-link" href="https://identity.dataspace.copernicus.eu/auth/realms/CDSE/account/#/personal-info" target="_blank" rel="noopener">identity.dataspace.copernicus.eu <i class="fas fa-arrow-up-right-from-square"></i></a>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-num">2</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Open User Settings</h4>
+                                        <p>Once you're signed in you'll land on the Dashboard. In the left-hand side panel, scroll to the bottom and open <strong>User Settings</strong>.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-num">3</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Create an OAuth client</h4>
+                                        <p>Find the <strong>OAuth clients</strong> card on the right side of the screen and click <strong>Create new OAuth client</strong>.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-num">4</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Name it and copy your keys</h4>
+                                        <p>Give the client a name (e.g. <code>trialx</code>) and click <strong>Create</strong>. Copernicus will display your <strong>Client ID</strong> and <strong>Client Secret</strong>.</p>
+                                        <div class="docs-callout docs-callout--warn">
+                                            <i class="fas fa-triangle-exclamation"></i>
+                                            <div><strong>Copy the Client Secret immediately.</strong> It's shown only once — if you navigate away without saving it, you'll have to create a new client to get a new one.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-num">5</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Connect trialx</h4>
+                                        <p>Back in trialx, the connect window opens automatically on first launch — or click <strong>Connect</strong> on the <strong>Copernicus Link</strong> card in the sidebar. Paste your <strong>Client ID</strong> and <strong>Client Secret</strong> and click <strong>Connect</strong>. Once it confirms, live telemetry is online — no config files needed.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p><strong>Prefer environment variables?</strong> Instead of the UI, copy <code>.env.example</code> to <code>.env</code> and fill in your keys there. Both methods work.</p>
+                            <table class="docs-table">
+                                <thead><tr><th>Variable</th><th>Required</th><th>Description</th></tr></thead>
+                                <tbody>
+                                    <tr><td><code>COPERNICUS_CLIENT_ID</code></td><td>Yes (or use UI)</td><td>Copernicus Data Space OAuth client ID</td></tr>
+                                    <tr><td><code>COPERNICUS_CLIENT_SECRET</code></td><td>Yes (or use UI)</td><td>Copernicus Data Space OAuth client secret</td></tr>
+                                    <tr><td><code>RF_MODEL_PATH</code></td><td>No</td><td>Path to trained RF model (defaults to <code>./rf_model.pickle</code>)</td></tr>
+                                    <tr><td><code>trialx_DATA_DIR</code></td><td>No</td><td>Root directory for all data (defaults to <code>./trialx_data</code>)</td></tr>
+                                </tbody>
+                            </table>
+                        </section>
+
+                        <section class="docs-section" id="doc-interface">
+                            <h2 class="docs-h2">The Interface</h2>
+                            <p>trialx runs directly in the browser with minimal setup.</p>
+                            <h3 class="docs-h3">Selecting an Area of Interest (AOI)</h3>
+                            <p>Click <strong>Draw AOI</strong>, then drag to define your analysis region. trialx automatically detects road corridors in the area, fetches satellite data, and begins analysis.</p>
+                            <h3 class="docs-h3">Recommended settings</h3>
+                            <ul class="docs-list">
+                                <li><strong>Mode:</strong> Dense Mode for maximum data coverage (more images processed → more reliable detection, especially under cloud).</li>
+                                <li><strong>Timeline:</strong> Short (1–2 weeks) for quick signals · Medium (1–3 months) for trend detection · Long (3–6 months) for a strong baseline + anomaly detection.</li>
+                            </ul>
+                            <h3 class="docs-h3">Data storage</h3>
+                            <p>Cached data and detection outputs default to <code>trialx_data/</code> in the project directory. Redirect it (e.g. to a larger external drive) with:</p>
+                            <pre class="docs-code"><code>export trialx_DATA_DIR=/path/to/your/storage</code></pre>
+                        </section>
+
+                        <section class="docs-section" id="doc-usecases">
+                            <h2 class="docs-h2">Use Cases</h2>
+                            <ul class="docs-list docs-list--spaced">
+                                <li><strong>Economic intelligence</strong> — Truck traffic is an honest economic signal. Port throughput drops show up in departing vehicles before any press release; trialx gives a proxy for economic activity that refreshes every ~5 days, anywhere on Earth.</li>
+                                <li><strong>Supply chain &amp; logistics</strong> — Monitor corridor congestion without your own fleet data, validate traffic projections against 6 months of satellite history, benchmark seasonal patterns across competing routes.</li>
+                                <li><strong>Trade &amp; sanctions monitoring</strong> — Rerouting from tariffs or sanctions shows on corridors before trade databases. Watch key crossings and compare parallel routes to spot diversion.</li>
+                                <li><strong>Security &amp; defense intelligence</strong> — Track changes in vehicle volume on access, supply, and perimeter roads over time. <em>trialx reports volume, speed, heading, and trend — not vehicle identity. At 10 m resolution a military truck looks identical to a civilian one; it is not a surveillance system and shouldn't be presented as one.</em></li>
+                                <li><strong>Disaster &amp; crisis response</strong> — Compare current activity against a historical baseline to find corridors that have gone quiet (blocked/damaged) or unusually busy (diversion/evacuation).</li>
+                                <li><strong>Journalism &amp; investigations</strong> — Satellite-derived, timestamped, independently verifiable data from an ESA satellite — not from any party with a stake in the answer.</li>
+                            </ul>
+                        </section>
+
+                        <section class="docs-section" id="doc-targets">
+                            <h2 class="docs-h2">Interesting Targets</h2>
+                            <h3 class="docs-h3">Built-in validation sites</h3>
+                            <p>Pre-configured from the original S2TruckDetect research:</p>
+                            <table class="docs-table">
+                                <thead><tr><th>Site</th><th>Highway</th><th>Bbox</th><th>Notes</th></tr></thead>
+                                <tbody>
+                                    <tr><td>Braunschweig</td><td>A7</td><td><code>52.25, 10.45, 52.32, 10.55</code></td><td>Research-grade validation</td></tr>
+                                    <tr><td>Frankfurt</td><td>A3</td><td><code>50.05, 8.55, 50.12, 8.65</code></td><td>High-density corridor</td></tr>
+                                    <tr><td>Karlsruhe</td><td>A5</td><td><code>48.95, 8.35, 49.05, 8.45</code></td><td>Standard benchmark</td></tr>
+                                </tbody>
+                            </table>
+                            <h3 class="docs-h3">Worth investigating</h3>
+                            <p>Use <strong>Draw AOI</strong> on the map: Shahid Rajaee Highway (Bandar Abbas), Rotterdam A15, Laredo I-35, Durban N3, Mombasa–Nairobi A109, UAE E11, Gwadar–Quetta M8. Historical comparison over months is the key capability — a single observation tells you little; a trend tells you a lot.</p>
+                        </section>
+
+                        <section class="docs-section" id="doc-howitworks">
+                            <h2 class="docs-h2">How It Works</h2>
+                            <p>Based on <a class="docs-link" href="https://ui.adsabs.harvard.edu/abs/2022RemS...14.1595F/abstract" target="_blank" rel="noopener">Fisser et al. (2022)</a>, adapted for real-time web streaming.</p>
+                            <h3 class="docs-h3">The physics</h3>
+                            <p>Sentinel-2 captures spectral bands ~1.01 s apart (blue B02 → red B04). A vehicle at 80 km/h moves ~22 m in that interval; at 10 m resolution it lands in different positions per band, creating the blue→green→red smear trialx is trained to find.</p>
+                            <h3 class="docs-h3">The pipeline</h3>
+                            <div class="docs-steps">
+                                <div class="docs-step">
+                                    <div class="docs-step-num">1</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Feature stack</h4>
+                                        <p>Seven features per pixel: variance of RGB, normalized R/B, normalized G/B, and mean-centered B04 / B03 / B02 / B08.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-num">2</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Random Forest classification</h4>
+                                        <p>Each pixel is classified as background, blue, green, or red — with background confidence thresholded at 0.75.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-num">3</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Recursive object extraction</h4>
+                                        <p>Seed at blue pixels, grow through green then red; validate all three colors are present within a 3–5 px extent, and keep detections scoring above 1.2.</p>
+                                    </div>
+                                </div>
+                                <div class="docs-step">
+                                    <div class="docs-step-num">4</div>
+                                    <div class="docs-step-body">
+                                        <h4 class="docs-step-title">Per-detection output</h4>
+                                        <p>Latitude/longitude, heading, speed estimate, and a confidence score for every detected vehicle.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <h3 class="docs-h3">Capabilities</h3>
+                            <div class="docs-stats">
+                                <div class="docs-stat"><span class="docs-stat-num">70–80%</span><span class="docs-stat-label">detection rate on European motorways</span></div>
+                                <div class="docs-stat"><span class="docs-stat-num">±15 km/h</span><span class="docs-stat-label">speed estimate per detection</span></div>
+                                <div class="docs-stat"><span class="docs-stat-num">5 days</span><span class="docs-stat-label">Sentinel-2 revisit interval</span></div>
+                                <div class="docs-stat"><span class="docs-stat-num">Global</span><span class="docs-stat-label">anywhere with Sentinel-2 coverage</span></div>
+                            </div>
+                            <div class="docs-caps">
+                                <div class="docs-caps-col docs-caps-col--good">
+                                    <h4 class="docs-caps-title"><i class="fas fa-circle-check"></i>What it does well</h4>
+                                    <ul class="docs-list">
+                                        <li>Count large vehicles (trucks/buses) on major highways</li>
+                                        <li>Track volume trends over weeks and months</li>
+                                        <li>Estimate speed (±15 km/h) and heading (±22.5°)</li>
+                                        <li>Process multi-month archives in minutes</li>
+                                    </ul>
+                                </div>
+                                <div class="docs-caps-col docs-caps-col--bad">
+                                    <h4 class="docs-caps-title"><i class="fas fa-circle-xmark"></i>What it can't do</h4>
+                                    <ul class="docs-list">
+                                        <li>Detect cars (sub-pixel at 10 m)</li>
+                                        <li>Distinguish vehicle types</li>
+                                        <li>See through clouds</li>
+                                        <li>Provide real-time monitoring (5-day revisit + delay)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="docs-section" id="doc-api">
+                            <h2 class="docs-h2">API Reference</h2>
+                            <table class="docs-table">
+                                <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+                                <tbody>
+                                    <tr><td><code>POST</code></td><td><code>/api/analyze</code></td><td>Run detection on an AOI (streaming progress)</td></tr>
+                                    <tr><td><code>GET</code></td><td><code>/api/roads</code></td><td>Fetch road network for a bbox</td></tr>
+                                    <tr><td><code>GET</code></td><td><code>/api/sites</code></td><td>List preset and historical sites</td></tr>
+                                    <tr><td><code>GET</code></td><td><code>/api/feed</code></td><td>Recent detection alerts</td></tr>
+                                    <tr><td><code>GET</code></td><td><code>/api/analytics/trends</code></td><td>Daily counts aggregated across missions</td></tr>
+                                    <tr><td><code>GET</code></td><td><code>/api/detections/:id</code></td><td>Detections for a specific mission</td></tr>
+                                </tbody>
+                            </table>
+                        </section>
+
+                        <section class="docs-section" id="doc-technical">
+                            <h2 class="docs-h2">Technical Notes</h2>
+                            <h3 class="docs-h3">Resolution</h3>
+                            <p>10 m pixels; a ~18 m truck spans ~2 px, and the motion smear extends it to 3–5 px. Cars (~4.5 m) are sub-pixel and invisible. Smaller vehicles need PlanetScope (3.7 m, same physics, Planet Labs key).</p>
+                            <h3 class="docs-h3">Cloud cover</h3>
+                            <p>trialx uses the Sentinel-2 cloud mask to exclude cloudy pixels; overcast frames correctly show zero detections. Read the moving-average trend, not individual days.</p>
+                            <h3 class="docs-h3">Regional accuracy</h3>
+                            <p>Trained on German autobahns. Accuracy varies by region:</p>
+                            <div class="docs-tabs">
+                                <div class="docs-tabs-bar" role="tablist">
+                                    <button class="docs-tab active" data-tab="eu">Europe</button>
+                                    <button class="docs-tab" data-tab="mena">MENA</button>
+                                    <button class="docs-tab" data-tab="asia">South / SE Asia</button>
+                                    <button class="docs-tab" data-tab="africa">Sub-Saharan Africa</button>
+                                </div>
+                                <div class="docs-tab-panel active" data-panel="eu"><p>European motorways: roughly 70–80% detection with 5–10% false positives. The strongest region, since the model was trained on German autobahns.</p></div>
+                                <div class="docs-tab-panel" data-panel="mena"><p>Middle East &amp; North Africa: strong results. Arid, high-contrast roads that are rarely cloudy make for excellent imaging conditions.</p></div>
+                                <div class="docs-tab-panel" data-panel="asia"><p>South &amp; Southeast Asia: mixed. Monsoon season limits the number of usable, cloud-free frames.</p></div>
+                                <div class="docs-tab-panel" data-panel="africa"><p>Sub-Saharan Africa: good on paved trunk roads, weaker on unpaved surfaces where contrast is lower.</p></div>
+                            </div>
+                        </section>
+
+                        <section class="docs-section" id="doc-references">
+                            <h2 class="docs-h2">References &amp; License</h2>
+                            <p>Fisser, H., et al. <em>Detecting Moving Trucks on Roads Using Sentinel-2 Data.</em> Remote Sensing of Environment, 2022. Reference implementation: S2TruckDetect (Henrik Fisser). Data: Copernicus Data Space Ecosystem (free, ESA). Roads: OpenStreetMap via Overpass. <strong>License: MIT.</strong></p>
+                            <p class="docs-muted"><em>trialx, from the Sanskrit</em> drishti <em>— sight, vision, perspective.</em></p>
+                        </section>
+
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="app.js"></script>
+</body>
+</html>
