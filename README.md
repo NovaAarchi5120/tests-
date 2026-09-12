@@ -91,7 +91,7 @@ export trialx_DATA_DIR=/path/to/your/storage
 
 ### Environment Variables
 
-<img width="1702" height="1073" alt="Image" src="https://github.com/user-attachments/assets/4a131e82-db54-474d-829e-1e4582eed27d" />
+
 These are optional if you connect through the UI instead.
 
 | Variable | Required | Description |
@@ -129,8 +129,6 @@ Sentinel-2 Image (10m resolution, 5-day revisit)
 
 ### Capabilities and Limits
 
-<img width="1700" height="1075" alt="Image" src="https://github.com/user-attachments/assets/c9c32a92-9fe8-4bc9-b728-9e997096f456" />
-You can also compare trends and historical data between areas
 
 
 **What it does well:**
