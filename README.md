@@ -2,70 +2,9 @@
 
 # trialx
 
-**See what's moving. Anywhere. For free.**
-
-Automated vehicle traffic intelligence from Sentinel-2 satellite imagery.
-
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Sentinel-2](https://img.shields.io/badge/Sentinel--2-Copernicus-003399?style=flat-square&logo=europeanunion&logoColor=white)](https://dataspace.copernicus.eu)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![LinkedIn](https://img.shields.io/badge/Sairaj_Balaji-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/sairaj-balaji-7295b2246/)
-
-[Quick Start](#quick-start) | [Use Cases](#use-cases) | [How It Works](#how-it-works) | [Targets](#interesting-targets)
-
----
 
 </div>
-<img width="1714" height="1070" alt="Image" src="https://github.com/user-attachments/assets/5ddbc0d3-05d8-4058-bde1-3e2f60572e02" />
 
-## What is this?
-
-trialx answers a simple question for any road on Earth: **how much traffic is on it, and how has that changed over time?**
-
-It works by exploiting a quirk in how the Sentinel-2 satellite captures imagery. The sensor records red, green, and blue light 1.01 seconds apart. Anything stationary looks normal. But a vehicle moving at highway speed shifts position between those captures, leaving a distinctive blue-green-red spectral smear across a few pixels. trialx finds those smears, counts them, estimates their speed and direction, and tracks how volume changes across weeks and months.
-
-The output is a traffic activity time-series for any major road corridor on the planet. Built on completely free Copernicus data, runs locally in a browser, and requires zero ground infrastructure.
-
-## Why this matters
-
-Traffic on roads is one of the most reliable observable indicators of what is actually happening in a place. More useful than official statements. Harder to fake than statistics. And until now, getting systematic road traffic data for an arbitrary location required either expensive commercial providers or physical access to install sensors.
-
-trialx changes that. Point it at any road, anywhere, and get months of traffic trend data in minutes.
-
-The applications are as broad as the question "what's moving on this road" is broad. Anywhere that vehicle activity tells you something meaningful, trialx can give you a data-driven answer from orbit.
-
-## Use Cases
-
-### Economic Intelligence
-
-Truck traffic is one of the most honest economic signals that exists. When a port's throughput drops, you see it in the vehicles leaving the gate before any press release. When trade routes shift, road traffic moves before the official statistics do. trialx gives you a proxy for economic activity that updates every 5 days and covers any corridor on Earth, from the Shahid Rajaee port highway in Bandar Abbas to the Mombasa-Nairobi A109 in Kenya.
-
-### Supply Chain and Logistics
-
-Monitor corridor congestion without relying on your own fleet data. Validate traffic projections for new facility locations by checking 6 months of satellite data instead of trusting a consultant's estimate. Benchmark seasonal patterns across competing routes. Identify bottlenecks by comparing volume across segments of the same corridor.
-
-### Trade and Sanctions Monitoring
-
-When sanctions take effect or tariffs change, the impact shows up on road corridors before it shows up in trade databases. Watch the Laredo-Nuevo Laredo I-35 crossing for US-Mexico rerouting signals. Monitor port feeder roads for throughput changes. Compare parallel corridors to spot where traffic is diverting.
-
-### Security and Defense Intelligence
-
-Vehicle movement on roads near sensitive facilities, military installations, border crossings, and restricted zones is a meaningful observable. trialx can detect changes in traffic volume and patterns on access roads, supply routes, and perimeter corridors over time. This includes roads serving military bases, nuclear facilities, missile test sites, naval ports, and border staging areas.
-
-To be clear about what this means in practice: trialx can tell you that vehicle activity on a specific road increased by 40% over the past two weeks, or that a normally busy corridor has gone quiet. It cannot identify what the vehicles are. At 10m resolution, a military truck looks identical to a civilian truck. You cannot distinguish a tank transporter from a logging truck. You cannot read markings, count axles, or determine cargo. What you get is volume, speed, heading, and trend. That is a useful signal when combined with other sources and context, but it is not a surveillance system and should not be presented as one.
-
-The same limitations apply to nuclear or WMD monitoring. You can observe whether traffic patterns on access roads to known facilities have changed. You cannot determine what is being transported. The intelligence value is in the pattern and the change, not in the individual detection.
-
-
-### Disaster and Crisis Response
-
-After floods, earthquakes, or conflict, which roads are actually operational? trialx can compare current vehicle activity against a historical baseline to identify corridors that have gone quiet (blocked, damaged) or corridors carrying unusual volume (diversion routes, evacuation flows). Especially useful in areas with poor real-time reporting infrastructure.
-
-
-### Journalism and Investigations
-
-Need evidence that does not come from a press release? trialx gives you satellite-derived, timestamped, independently verifiable data. When officials claim a trade corridor is thriving, you can check. When a new road is supposedly complete, you can see if anyone is actually using it. The data comes from a European Space Agency satellite, not from any government or corporation with a stake in the answer.
 
 ## Quick Start
 
@@ -165,10 +104,6 @@ These are optional if you connect through the UI instead.
 ## How It Works
 
 Based on [Fisser et al. (2022)](https://ui.adsabs.harvard.edu/abs/2022RemS...14.1595F/abstract), adapted for real-time web streaming.
-
-### The Physics
-
-Sentinel-2's sensor captures spectral bands at slightly different times, about 1.01 seconds between blue (B02) and red (B04). A vehicle at 80 km/h moves roughly 22 meters in that interval. At 10m pixel resolution, it shows up at different positions in each band, creating a blue to green to red smear that trialx is trained to find.
 
 ### The Pipeline
 
@@ -300,14 +235,6 @@ Trained on German autobahns. In practice:
 
 
 
-## References
-
-Fisser, H., Rahimi, E., Tetteh, M., Hoeser, T., Mayer-Gurr, T., and Kunzer, C. [Detecting Moving Trucks on Roads Using Sentinel-2 Data](https://ui.adsabs.harvard.edu/abs/2022RemS...14.1595F/abstract). Remote Sensing of Environment, 2022.
-
-Reference implementation: [S2TruckDetect](https://ui.adsabs.harvard.edu/abs/2022RemS...14.1595F/abstract) by Henrik Fisser.
-
-Satellite data: [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu/) (free, ESA).
-Roads: [OpenStreetMap](https://www.openstreetmap.org/) via Overpass API.
 
 ## License
 
