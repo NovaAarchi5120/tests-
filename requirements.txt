@@ -1,0 +1,20 @@
+# trialx Tactical Dependencies
+
+# Backend Engine
+fastapi
+uvicorn
+python-dotenv
+requests
+pydantic
+
+# Geospatial & Orbital Logic
+sentinelhub
+osmnx
+geopandas
+shapely
+imageio
+numpy<2.0.0
+rasterio
+
+# Machine Learning (Modernized for Python 3.12+ build compatibility)
+scikit-learn==1.3.2
